@@ -22,8 +22,9 @@ from __future__ import division, print_function, unicode_literals
 
 import copy
 import objc
-from math import radians, sin, cos
+from math import ceil, radians, sin, cos
 from random import uniform
+from AppKit import NSFontAttributeName, NSString
 from Foundation import NSPoint
 from GlyphsApp import Glyphs
 from GlyphsApp.plugins import FilterWithDialog
@@ -60,7 +61,7 @@ ACTION_BUTTON_LABEL = {
 
 ANGLE_LABEL = {
 	"en": "Angle (ccw, 0=north)",
-	"de": "Winkel (gegen UZS, 0=Nord)",
+	"de": "Winkel (ggUZS, 0=Nord)",
 	"fr": "Angle (antihoraire, 0=nord)",
 	"it": "Angolo (antiorario, 0=nord)",
 	"pt": "Ângulo (anti-horário, 0=norte)",
@@ -218,8 +219,7 @@ class Tilt(FilterWithDialog):
 		width = 400
 		height = 76
 		inset = 15
-		labelWidth = 210
-		fieldLeft = inset + labelWidth + 8
+		gap = 4
 		self.paletteView = Window((width, height))
 		self.paletteView.group = Group((0, 0, width, height))
 		group = self.paletteView.group
@@ -227,18 +227,37 @@ class Tilt(FilterWithDialog):
 		angleTooltip = f"{Glyphs.localize(ANGLE_TOOLTIP)} {rangeHint}"
 		tiltTooltip = f"{Glyphs.localize(TILT_TOOLTIP)} {rangeHint}"
 
-		group.angleLabel = TextBox((inset, 15, labelWidth, 17), Glyphs.localize(ANGLE_LABEL))
-		group.angleField = SteppingEditText((fieldLeft, 12, -inset, 22), "", callback=self.valueChanged)
-		group.angleLabel.setToolTip(angleTooltip)
-		group.angleField.setToolTip(angleTooltip)
+		# Right-aligned labels, as wide as the widest one, butting against the fields,
+		# which take the rest of the width up to the right edge.
+		group.angleLabel = TextBox((inset, 15, 100, 17), Glyphs.localize(ANGLE_LABEL), alignment="right")
+		group.tiltLabel = TextBox((inset, 45, 100, 17), Glyphs.localize(TILT_LABEL), alignment="right")
+		labelWidth = ceil(max(self.textWidth(group.angleLabel), self.textWidth(group.tiltLabel))) + 4  # cell padding
+		group.angleLabel.setPosSize((inset, 15, labelWidth, 17))
+		group.tiltLabel.setPosSize((inset, 45, labelWidth, 17))
+		fieldLeft = inset + labelWidth + gap
 
-		group.tiltLabel = TextBox((inset, 45, labelWidth, 17), Glyphs.localize(TILT_LABEL))
+		group.angleField = SteppingEditText((fieldLeft, 12, -inset, 22), "", callback=self.valueChanged)
 		group.tiltField = SteppingEditText((fieldLeft, 42, -inset, 22), "", callback=self.valueChanged)
-		group.tiltLabel.setToolTip(tiltTooltip)
-		group.tiltField.setToolTip(tiltTooltip)
+		for element, tooltip in (
+			(group.angleLabel, angleTooltip),
+			(group.angleField, angleTooltip),
+			(group.tiltLabel, tiltTooltip),
+			(group.tiltField, tiltTooltip),
+		):
+			element.setToolTip(tooltip)
 
 		self.dialog = group.getNSView()
+
+		# The Custom Parameter dialog stacks the view with Auto Layout and takes its height from
+		# constraints, so a view with only frame-based content would collapse to zero height there.
+		self.dialog.heightAnchor().constraintEqualToConstant_(height).setActive_(True)
 		self.loadValues()
+
+	@objc.python_method
+	def textWidth(self, textBox):
+		nsTextField = textBox.getNSTextField()
+		attributes = {NSFontAttributeName: nsTextField.font()}
+		return NSString.stringWithString_(nsTextField.stringValue()).sizeWithAttributes_(attributes).width
 
 	def view(self):
 		self.buildDialog()

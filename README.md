@@ -20,7 +20,7 @@ The menu name, the dialog and the tooltips are localized in German, French, Ital
 | Language | Menu name | Button | Angle | Tilt |
 |---|---|---|---|---|
 | English | 3D Tilt | Tilt | Angle (ccw, 0=north) | Tilt of plane |
-| Deutsch | 3D-Kippen | Kippen | Winkel (gegen UZS, 0=Nord) | Kippung der Ebene |
+| Deutsch | 3D-Kippen | Kippen | Winkel (ggUZS, 0=Nord) | Kippung der Ebene |
 | Français | Inclinaison 3D | Incliner | Angle (antihoraire, 0=nord) | Inclinaison du plan |
 | Italiano | Inclinazione 3D | Inclina | Angolo (antiorario, 0=nord) | Inclinazione del piano |
 | Português | Inclinação 3D | Inclinar | Ângulo (anti-horário, 0=norte) | Inclinação do plano |
