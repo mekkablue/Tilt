@@ -7,6 +7,10 @@ Glyphs.app filter for tilting glyphs in (pseudo) 3D. Parallel edges converge lik
 
 The pivot is always the center of the layer’s bounding box. Components are decomposed, and the layer contents are replaced with the tilted outlines. Anchors are tilted along.
 
+![Tilt](Tilt.png)
+
+The image above is a rendering of the filter’s algorithm with the *R* of [Inter](https://rsms.me/inter/) (SIL Open Font License), at angles 0°, 90° and 45° and a tilt of 45°. The gray shape is the original, the orange cross the pivot, and the arrow the angle.
+
 ### Localization
 
 The menu name, the dialog and the tooltips are localized in German, French, Italian, Portuguese, Spanish, Korean, Czech, Japanese, Simplified Chinese and Traditional Chinese. The menu name, the button and the labels read:
