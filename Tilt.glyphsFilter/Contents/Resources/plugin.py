@@ -9,6 +9,8 @@ from __future__ import division, print_function, unicode_literals
 #	Tilts the layer in 3D (real perspective, so parallel edges converge into a trapezoid)
 #	around the center of its bounding box.
 #
+#	Both values accept a range like 10:30 for a random value in between, new for each layer.
+#
 #	Read the docs:
 #	https://github.com/schriftgestalt/GlyphsSDK/tree/master/Python%20Templates/Filter
 #
@@ -21,10 +23,12 @@ from __future__ import division, print_function, unicode_literals
 import copy
 import objc
 from math import radians, sin, cos
+from random import uniform
 from Foundation import NSPoint
 from GlyphsApp import Glyphs
 from GlyphsApp.plugins import FilterWithDialog
-from vanilla import Window, Group, TextBox, EditText
+from GlyphsApp.UI import SteppingEditText
+from vanilla import Window, Group, TextBox
 
 MENU_NAME = {
 	"en": "3D Tilt",
@@ -55,17 +59,17 @@ ACTION_BUTTON_LABEL = {
 }
 
 ANGLE_LABEL = {
-	"en": "Angle",
-	"de": "Winkel",
-	"fr": "Angle",
-	"it": "Angolo",
-	"pt": "Ângulo",
-	"es": "Ángulo",
-	"ko": "각도",
-	"cs": "Úhel",
-	"ja": "角度",
-	"zh-Hans": "角度",
-	"zh-Hant": "角度",
+	"en": "Angle (ccw, 0=north)",
+	"de": "Winkel (gegen UZS, 0=Nord)",
+	"fr": "Angle (antihoraire, 0=nord)",
+	"it": "Angolo (antiorario, 0=nord)",
+	"pt": "Ângulo (anti-horário, 0=norte)",
+	"es": "Ángulo (antihorario, 0=norte)",
+	"ko": "각도 (반시계, 0=북쪽)",
+	"cs": "Úhel (proti hod. r., 0=sever)",
+	"ja": "角度（反時計回り、0=北）",
+	"zh-Hans": "角度（逆时针，0=北）",
+	"zh-Hant": "角度（逆時針，0=北）",
 }
 
 ANGLE_TOOLTIP = {
@@ -83,17 +87,17 @@ ANGLE_TOOLTIP = {
 }
 
 TILT_LABEL = {
-	"en": "Tilt",
-	"de": "Kippung",
-	"fr": "Inclinaison",
-	"it": "Inclinazione",
-	"pt": "Inclinação",
-	"es": "Inclinación",
-	"ko": "기울기",
-	"cs": "Náklon",
-	"ja": "傾き",
-	"zh-Hans": "倾斜度",
-	"zh-Hant": "傾斜度",
+	"en": "Tilt of plane",
+	"de": "Kippung der Ebene",
+	"fr": "Inclinaison du plan",
+	"it": "Inclinazione del piano",
+	"pt": "Inclinação do plano",
+	"es": "Inclinación del plano",
+	"ko": "평면 기울기",
+	"cs": "Náklon roviny",
+	"ja": "平面の傾き",
+	"zh-Hans": "平面倾斜度",
+	"zh-Hant": "平面傾斜度",
 }
 
 TILT_TOOLTIP = {
@@ -109,6 +113,39 @@ TILT_TOOLTIP = {
 	"zh-Hans": "平面的倾斜度（度）。角度方向的一侧远离观察者。",
 	"zh-Hant": "平面的傾斜度（度）。角度方向的一側遠離觀察者。",
 }
+
+RANGE_HINT = {
+	"en": "Two numbers with a colon (e.g. 10:30) give a random value in between, new for each glyph.",
+	"de": "Zwei Zahlen mit Doppelpunkt (z. B. 10:30) ergeben einen Zufallswert dazwischen, neu für jedes Glyph.",
+	"fr": "Deux nombres séparés par deux-points (p. ex. 10:30) donnent une valeur aléatoire entre les deux, nouvelle pour chaque glyphe.",
+	"it": "Due numeri separati da due punti (es. 10:30) danno un valore casuale compreso tra i due, nuovo per ogni glifo.",
+	"pt": "Dois números separados por dois-pontos (p. ex. 10:30) geram um valor aleatório entre eles, novo para cada glifo.",
+	"es": "Dos números separados por dos puntos (p. ej. 10:30) dan un valor aleatorio entre ambos, nuevo para cada glifo.",
+	"ko": "콜론으로 구분한 두 숫자(예: 10:30)는 그 사이의 무작위 값이며 글리프마다 새로 정해집니다.",
+	"cs": "Dvě čísla oddělená dvojtečkou (např. 10:30) dají náhodnou hodnotu mezi nimi, pro každý glyf novou.",
+	"ja": "コロンで区切った2つの数値（例：10:30）は、その間のランダムな値になり、グリフごとに新しく決まります。",
+	"zh-Hans": "用冒号分隔的两个数字（如 10:30）表示两者之间的随机值，每个字形各取一次。",
+	"zh-Hant": "以冒號分隔的兩個數字（如 10:30）表示兩者之間的隨機值，每個字形各取一次。",
+}
+
+
+def parseRange(text):
+	"""
+	Returns (low, high) as floats for text like "10" (low = high = 10.0)
+	or "10:30" (a range, also written "10~30" in Custom Parameters, where the colon is taken).
+	Raises ValueError for incomplete or invalid input.
+	"""
+	parts = str(text).strip().replace(",", ".").replace("~", ":").split(":")
+	if len(parts) == 1:
+		return float(parts[0]), float(parts[0])
+	if len(parts) == 2:
+		return float(parts[0]), float(parts[1])
+	raise ValueError("not a number or a range: %s" % text)
+
+
+def customParameterValue(text):
+	"""Writes a dialog value for a Custom Parameter: no colon (it separates name and value), no spaces."""
+	return str(text).strip().replace(",", ".").replace(" ", "").replace(":", "~")
 
 
 def tiltedPosition(position, center, angle, tilt, distance):
@@ -144,7 +181,7 @@ class Tilt(FilterWithDialog):
 
 	@objc.python_method
 	def pref(self, prefName):
-		return float(Glyphs.defaults[self.prefDomain(prefName)])
+		return str(Glyphs.defaults[self.prefDomain(prefName)])
 
 	@objc.python_method
 	def setPref(self, prefName, value):
@@ -157,41 +194,66 @@ class Tilt(FilterWithDialog):
 		# Word on Run Button (default: Apply)
 		self.actionButtonLabel = Glyphs.localize(ACTION_BUTTON_LABEL)
 
-		# default values, also needed when called through a Custom Parameter without values
-		Glyphs.registerDefault(self.prefDomain("angle"), 0.0)
-		Glyphs.registerDefault(self.prefDomain("tilt"), 10.0)
+		self.buildDialog()
 
-		# Vanilla dialog: needs a window, but only its group’s NSView is used.
+	@objc.python_method
+	def registerDefaults(self):
+		# default values (strings, because they may be ranges), also needed when called
+		# through a Custom Parameter without values
+		Glyphs.registerDefault(self.prefDomain("angle"), "0")
+		Glyphs.registerDefault(self.prefDomain("tilt"), "10")
+
+	@objc.python_method
+	def buildDialog(self):
+		"""
+		Vanilla dialog: needs a window, but only its group’s NSView is used.
+		Safe to call more than once: Glyphs also asks for the view of instances on which settings()
+		has not run, e.g. in the Custom Parameter dialog, so view() builds the dialog on demand.
+		"""
+		if getattr(self, "paletteView", None) is not None:
+			return
+		self.registerDefaults()
+
 		# The width leaves room for the gear menu and the buttons Glyphs adds below the view.
-		width = 320
-		inset = 15
-		fieldLeft = 110
-		fieldWidth = 70
+		width = 400
 		height = 76
+		inset = 15
+		labelWidth = 210
+		fieldLeft = inset + labelWidth + 8
 		self.paletteView = Window((width, height))
 		self.paletteView.group = Group((0, 0, width, height))
 		group = self.paletteView.group
+		rangeHint = Glyphs.localize(RANGE_HINT)
+		angleTooltip = f"{Glyphs.localize(ANGLE_TOOLTIP)} {rangeHint}"
+		tiltTooltip = f"{Glyphs.localize(TILT_TOOLTIP)} {rangeHint}"
 
-		group.angleLabel = TextBox((inset, 15, fieldLeft - inset - 5, 17), Glyphs.localize(ANGLE_LABEL))
-		group.angleField = EditText((fieldLeft, 12, fieldWidth, 22), "", callback=self.valueChanged)
-		group.angleUnit = TextBox((fieldLeft + fieldWidth + 5, 15, 15, 17), "°")
-		group.angleLabel.setToolTip(Glyphs.localize(ANGLE_TOOLTIP))
-		group.angleField.setToolTip(Glyphs.localize(ANGLE_TOOLTIP))
+		group.angleLabel = TextBox((inset, 15, labelWidth, 17), Glyphs.localize(ANGLE_LABEL))
+		group.angleField = SteppingEditText((fieldLeft, 12, -inset, 22), "", callback=self.valueChanged)
+		group.angleLabel.setToolTip(angleTooltip)
+		group.angleField.setToolTip(angleTooltip)
 
-		group.tiltLabel = TextBox((inset, 45, fieldLeft - inset - 5, 17), Glyphs.localize(TILT_LABEL))
-		group.tiltField = EditText((fieldLeft, 42, fieldWidth, 22), "", callback=self.valueChanged)
-		group.tiltUnit = TextBox((fieldLeft + fieldWidth + 5, 45, 15, 17), "°")
-		group.tiltLabel.setToolTip(Glyphs.localize(TILT_TOOLTIP))
-		group.tiltField.setToolTip(Glyphs.localize(TILT_TOOLTIP))
+		group.tiltLabel = TextBox((inset, 45, labelWidth, 17), Glyphs.localize(TILT_LABEL))
+		group.tiltField = SteppingEditText((fieldLeft, 42, -inset, 22), "", callback=self.valueChanged)
+		group.tiltLabel.setToolTip(tiltTooltip)
+		group.tiltField.setToolTip(tiltTooltip)
 
 		self.dialog = group.getNSView()
+		self.loadValues()
+
+	def view(self):
+		self.buildDialog()
+		return self.dialog
+
+	@objc.python_method
+	def loadValues(self):
+		group = self.paletteView.group
+		group.angleField.set(self.pref("angle"))
+		group.tiltField.set(self.pref("tilt"))
 
 	# On dialog show
 	@objc.python_method
 	def start(self):
-		group = self.paletteView.group
-		group.angleField.set(f"{self.pref('angle'):g}")
-		group.tiltField.set(f"{self.pref('tilt'):g}")
+		self.loadValues()
 
 	# Action triggered by UI
 	@objc.python_method
@@ -199,22 +261,30 @@ class Tilt(FilterWithDialog):
 		group = self.paletteView.group
 		values = {}
 		for prefName, field in (("angle", group.angleField), ("tilt", group.tiltField)):
+			text = field.get().strip()
 			try:
-				values[prefName] = float(field.get().replace(",", "."))
+				parseRange(text)
 			except ValueError:
-				return  # incomplete input like "" or "-": keep the last valid preview
-		for prefName, value in values.items():
-			self.setPref(prefName, value)
-		self.update()
+				return  # incomplete input like "", "-" or "10:": keep the last valid preview
+			values[prefName] = text
+		for prefName, text in values.items():
+			self.setPref(prefName, text)
+
+		# the Custom Parameter dialog has no layers to preview
+		if self.valueForKey_("layers") is not None:
+			self.update()
 
 	# Actual filter
 	@objc.python_method
 	def filter(self, layer, inEditView, customParameters):
 
 		# Called on font export, get values from customParameters,
-		# otherwise use the values stored from the dialog
-		angle = float(customParameters.get("angle", self.pref("angle")))
-		tilt = float(customParameters.get("tilt", self.pref("tilt")))
+		# otherwise use the values stored from the dialog.
+		# A range like 10:30 (10~30 in Custom Parameters) gets a new random value for each layer.
+		angleLow, angleHigh = parseRange(customParameters.get("angle", self.pref("angle")))
+		tiltLow, tiltHigh = parseRange(customParameters.get("tilt", self.pref("tilt")))
+		angle = uniform(angleLow, angleHigh)
+		tilt = uniform(tiltLow, tiltHigh)
 
 		decomposedLayer = layer.copyDecomposedLayer()
 		if not decomposedLayer.shapes:
@@ -241,8 +311,8 @@ class Tilt(FilterWithDialog):
 	def generateCustomParameter(self):
 		return "%s; angle:%s; tilt:%s;" % (
 			self.__class__.__name__,
-			self.pref("angle"),
-			self.pref("tilt"),
+			customParameterValue(self.pref("angle")),
+			customParameterValue(self.pref("tilt")),
 		)
 
 	@objc.python_method
