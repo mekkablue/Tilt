@@ -13,9 +13,9 @@
 	<key>CFBundleName</key>
 	<string>Tilt</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.3.1</string>
+	<string>1.3.2</string>
 	<key>CFBundleVersion</key>
-	<string>5</string>
+	<string>6</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright, Rainer Erich Scheichelbauer, 2026</string>
 	<key>NSPrincipalClass</key>
@@ -29,6 +29,6 @@
 	<key>productPageURL</key>
 	<string>https://github.com/mekkablue/Tilt</string>
 	<key>productReleaseNotes</key>
-	<string>Also removes the layer’s hints, which would point to replaced nodes.</string>
+	<string>Cleans up the paths of the decomposed copy before tilting.</string>
 </dict>
 </plist>

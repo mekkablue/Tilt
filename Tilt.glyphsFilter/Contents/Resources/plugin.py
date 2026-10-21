@@ -308,6 +308,7 @@ class Tilt(FilterWithDialog):
 		# without hints, so they cannot interfere with the moved nodes. The layer loses its hints, too.
 		workLayer = layer.copyDecomposedLayer()
 		workLayer.hints = None
+		workLayer.cleanUpPaths()  # e.g. duplicate nodes at start points left over from decomposing
 		if not workLayer.shapes:
 			return
 
