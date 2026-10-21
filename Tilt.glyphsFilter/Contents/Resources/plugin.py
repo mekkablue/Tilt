@@ -20,7 +20,6 @@ from __future__ import division, print_function, unicode_literals
 #
 ###########################################################################################################
 
-import copy
 import objc
 from math import ceil, radians, sin, cos
 from random import uniform
@@ -305,11 +304,14 @@ class Tilt(FilterWithDialog):
 		angle = uniform(angleLow, angleHigh)
 		tilt = uniform(tiltLow, tiltHigh)
 
-		decomposedLayer = layer.copyDecomposedLayer()
-		if not decomposedLayer.shapes:
+		# Work on a copy with all components decomposed (corner components included),
+		# without hints, so they cannot interfere with the moved nodes.
+		workLayer = layer.copyDecomposedLayer()
+		workLayer.hints = None
+		if not workLayer.shapes:
 			return
 
-		bounds = decomposedLayer.bounds
+		bounds = workLayer.bounds
 		center = NSPoint(
 			bounds.origin.x + bounds.size.width * 0.5,
 			bounds.origin.y + bounds.size.height * 0.5,
@@ -318,13 +320,15 @@ class Tilt(FilterWithDialog):
 		if not distance:
 			return
 
-		for path in decomposedLayer.paths:
+		for path in workLayer.paths:
 			for node in path.nodes:
 				node.position = tiltedPosition(node.position, center, angle, tilt, distance)
+
+		# anchors stay on the layer, only their positions change
 		for anchor in layer.anchors:
 			anchor.position = tiltedPosition(anchor.position, center, angle, tilt, distance)
 
-		layer.shapes = copy.copy(decomposedLayer.shapes)
+		layer.shapes = workLayer.shapes
 
 	@objc.python_method
 	def generateCustomParameter(self):
