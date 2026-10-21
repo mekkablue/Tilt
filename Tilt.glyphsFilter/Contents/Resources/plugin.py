@@ -305,7 +305,7 @@ class Tilt(FilterWithDialog):
 		tilt = uniform(tiltLow, tiltHigh)
 
 		# Work on a copy with all components decomposed (corner components included),
-		# without hints, so they cannot interfere with the moved nodes.
+		# without hints, so they cannot interfere with the moved nodes. The layer loses its hints, too.
 		workLayer = layer.copyDecomposedLayer()
 		workLayer.hints = None
 		if not workLayer.shapes:
@@ -328,6 +328,8 @@ class Tilt(FilterWithDialog):
 		for anchor in layer.anchors:
 			anchor.position = tiltedPosition(anchor.position, center, angle, tilt, distance)
 
+		# hints would point to nodes that are about to be replaced
+		layer.hints = None
 		layer.shapes = workLayer.shapes
 
 	@objc.python_method

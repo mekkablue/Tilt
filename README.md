@@ -7,7 +7,7 @@ Glyphs.app filter for tilting glyphs in (pseudo) 3D. Parallel edges converge lik
 
 Both fields are stepping fields: click into one and use the arrow keys. Instead of a single number, you can enter two numbers with a colon in between, e.g. `10:30`, for a random value between the two. Each glyph gets a new random value, so a range like `-15:15` for the angle makes every glyph tilt in a different direction.
 
-The pivot is always the center of the layer’s bounding box. The filter works on a decomposed copy of the layer (all components, corner components included, and without hints), and the layer’s shapes are then replaced with the tilted outlines of that copy. Anchors are tilted along.
+The pivot is always the center of the layer’s bounding box. The filter works on a decomposed copy of the layer (all components, corner components included, and without hints), and the layer’s shapes are then replaced with the tilted outlines of that copy. The layer’s hints are removed, because they would point to nodes that no longer exist. Anchors are tilted along.
 
 ![Tilt](Tilt.png)
 
